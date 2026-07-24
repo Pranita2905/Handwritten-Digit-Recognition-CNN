@@ -1,6 +1,6 @@
 # ==========================================================
-# Handwritten Digit Recognition using CNN (Flask + TensorFlow)
-# Model : TensorFlow / Keras Sequential CNN
+# Handwritten Digit Recognition using CNN
+# Flask + TensorFlow
 # ==========================================================
 
 from flask import Flask, request, jsonify
@@ -9,58 +9,62 @@ from PIL import Image
 import numpy as np
 import os
 
-# ==========================================================
-# Flask Configuration
-# ==========================================================
+# ----------------------------------------------------------
+# Initialize Flask App
+# ----------------------------------------------------------
 
 app = Flask(__name__)
 
-# ==========================================================
-# Load Trained Model
-# ==========================================================
-
-MODEL_PATH = "model.keras"
+# ----------------------------------------------------------
+# Load CNN Model
+# ----------------------------------------------------------
 
 try:
-    model = load_model(MODEL_PATH)
-    print("✅ CNN Model Loaded Successfully")
+    model = load_model("model.keras")
+    print("✅ Model loaded successfully.")
 except Exception as e:
-    print(f"❌ Failed to Load Model: {e}")
+    print("❌ Unable to load model:", e)
     model = None
 
-# ==========================================================
+
+# ----------------------------------------------------------
 # Home Route
-# ==========================================================
+# ----------------------------------------------------------
 
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({
         "Project": "Handwritten Digit Recognition",
         "Framework": "Flask",
-        "Deep Learning": "TensorFlow / Keras CNN",
-        "Status": "Running Successfully 🚀"
+        "Model": "TensorFlow CNN",
+        "Status": "Running Successfully"
     })
 
-# ==========================================================
+
+# ----------------------------------------------------------
 # Prediction Route
-# ==========================================================
+# ----------------------------------------------------------
 
 @app.route("/predict", methods=["POST"])
 def predict():
 
     if model is None:
         return jsonify({
-            "error": "Model not loaded."
+            "success": False,
+            "message": "Model not loaded."
         }), 500
 
     if "image" not in request.files:
         return jsonify({
-            "error": "Please upload an image."
+            "success": False,
+            "message": "No image uploaded."
         }), 400
 
     try:
 
-        image = Image.open(request.files["image"]).convert("L")
+        file = request.files["image"]
+
+        image = Image.open(file).convert("L")
 
         image = image.resize((28, 28))
 
@@ -70,16 +74,17 @@ def predict():
 
         image = image.reshape(1, 28, 28, 1)
 
-        prediction = model.predict(image)
+        prediction = model.predict(image, verbose=0)
 
         predicted_digit = int(np.argmax(prediction))
 
-        confidence = float(np.max(prediction) * 100)
+        confidence = round(float(np.max(prediction) * 100), 2)
 
         return jsonify({
 
-            "Predicted Digit": predicted_digit,
-            "Confidence": f"{confidence:.2f}%"
+            "success": True,
+            "prediction": predicted_digit,
+            "confidence": f"{confidence}%"
 
         })
 
@@ -87,35 +92,36 @@ def predict():
 
         return jsonify({
 
-            "error": str(e)
+            "success": False,
+            "message": str(e)
 
         }), 500
 
-# ==========================================================
-# Health Check
-# ==========================================================
 
-@app.route("/health")
+# ----------------------------------------------------------
+# Health Check
+# ----------------------------------------------------------
+
+@app.route("/health", methods=["GET"])
 def health():
 
     return jsonify({
 
-        "status": "Healthy ✅"
+        "status": "healthy"
 
     })
 
-# ==========================================================
-# Main
-# ==========================================================
+
+# ----------------------------------------------------------
+# Run Flask App
+# ----------------------------------------------------------
 
 if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 5000))
 
     app.run(
-
         host="0.0.0.0",
         port=port,
         debug=False
-
     )
